@@ -54,29 +54,29 @@ function config_user_save()
 		."// DEFAULT_TEXT_COLOR applies to miscellaneous web page text.\n"
 		."// MEDIA_TEXT_COLOR applies to motion video and still filenames.\n"
 		."//\n");
-	fwrite($file, "define(\"N_VIDEO_SCROLL_PIXELS\", \"$n_video_scroll_pixels\");\n");
-	fwrite($file, "define(\"N_STILL_SCROLL_PIXELS\", \"$n_still_scroll_pixels\");\n");
-	fwrite($file, "define(\"N_THUMB_SCROLL_PIXELS\", \"$n_thumb_scroll_pixels\");\n");
-	fwrite($file, "define(\"N_LOG_SCROLL_PIXELS\", \"$n_log_scroll_pixels\");\n\n");
+	fwrite($file, "define(\"N_VIDEO_SCROLL_PIXELS\", " . var_export("$n_video_scroll_pixels", true) . ");\n");
+	fwrite($file, "define(\"N_STILL_SCROLL_PIXELS\", " . var_export("$n_still_scroll_pixels", true) . ");\n");
+	fwrite($file, "define(\"N_THUMB_SCROLL_PIXELS\", " . var_export("$n_thumb_scroll_pixels", true) . ");\n");
+	fwrite($file, "define(\"N_LOG_SCROLL_PIXELS\", " . var_export("$n_log_scroll_pixels", true) . ");\n\n");
 
-	fwrite($file, "define(\"DEFAULT_TEXT_COLOR\", \"$default_text_color\");\n");
-	fwrite($file, "define(\"SELECTED_TEXT_COLOR\", \"$selected_text_color\");\n");
-	fwrite($file, "define(\"MEDIA_TEXT_COLOR\", \"$media_text_color\");\n");
-	fwrite($file, "define(\"MANUAL_VIDEO_TEXT_COLOR\", \"$manual_video_text_color\");\n");
-	fwrite($file, "define(\"LOG_TEXT_COLOR\", \"$log_text_color\");\n\n");
+	fwrite($file, "define(\"DEFAULT_TEXT_COLOR\", " . var_export("$default_text_color", true) . ");\n");
+	fwrite($file, "define(\"SELECTED_TEXT_COLOR\", " . var_export("$selected_text_color", true) . ");\n");
+	fwrite($file, "define(\"MEDIA_TEXT_COLOR\", " . var_export("$media_text_color", true) . ");\n");
+	fwrite($file, "define(\"MANUAL_VIDEO_TEXT_COLOR\", " . var_export("$manual_video_text_color", true) . ");\n");
+	fwrite($file, "define(\"LOG_TEXT_COLOR\", " . var_export("$log_text_color", true) . ");\n\n");
 
 	fwrite($file,
 		 "// For backgrounds, use shadow.jpg, paper1.png or passion.jpg\n"
 		."// in the images directory.  Or install your own background in the\n"
 		."// images directory and name it bg_XXX.jpg (or .png) so git will ignore it.\n"
 		."//\n");
-	fwrite($file, "define(\"BACKGROUND_IMAGE\", \"$background_image\");\n\n");
+	fwrite($file, "define(\"BACKGROUND_IMAGE\", " . var_export("$background_image", true) . ");\n\n");
 
 	fwrite($file,
 		 "// PiKrellCam controls in development.  Set to \"yes\" to see mock up.\n"
 		."// User custom controls can be implemented in custom-control.php.\n"
 		."//\n");
-	fwrite($file, "define(\"INCLUDE_CONTROL\", \"$include_control\");\n\n");
+	fwrite($file, "define(\"INCLUDE_CONTROL\", " . var_export("$include_control", true) . ");\n\n");
 
 	fwrite($file,
 		 "// Setting VIDEO_URL allows a special case viewing of videos off site if\n"
@@ -86,26 +86,26 @@ function config_user_save()
 		."// Now, when the thumbs view is not scrolled (click \"Toggle Scrolled\"), thumb\n"
 		."// image URL links will be to VIDEO_URL with the video filename appended.\n"
 		."//\n");
-	fwrite($file, "define(\"VIDEO_URL\", \"$video_url\");\n\n");
+	fwrite($file, "define(\"VIDEO_URL\", " . var_export("$video_url", true) . ");\n\n");
 
 
 	fwrite($file,
 		 "// The remaining defines here are changed by web page buttons and should not\n"
 		."// need to be edited here.\n"
 		."//\n");
-	fwrite($file, "define(\"SHOW_AUDIO_CONTROLS\", \"$show_audio_controls\");\n\n");
-	fwrite($file, "define(\"NAME_STYLE\", \"$name_style\");\n");
-	fwrite($file, "define(\"N_COLUMNS\", \"$n_columns\");\n");
-	fwrite($file, "define(\"VIDEOS_MODE\", \"$videos_mode\");\n");
-	fwrite($file, "define(\"STILLS_MODE\", \"$stills_mode\");\n");
-	fwrite($file, "define(\"LOOP_MODE\", \"$loop_mode\");\n");
-	fwrite($file, "define(\"ARCHIVE_INITIAL_VIEW\", \"$archive_initial_view\");\n");
-	fwrite($file, "define(\"ARCHIVE_THUMBS_SCROLLED\", \"$archive_thumbs_scrolled\");\n");
-	fwrite($file, "define(\"MEDIA_THUMBS_SCROLLED\", \"$media_thumbs_scrolled\");\n\n");
-	fwrite($file, "define(\"LOOP_THUMBS_SCROLLED\", \"$loop_thumbs_scrolled\");\n\n");
+	fwrite($file, "define(\"SHOW_AUDIO_CONTROLS\", " . var_export("$show_audio_controls", true) . ");\n\n");
+	fwrite($file, "define(\"NAME_STYLE\", " . var_export("$name_style", true) . ");\n");
+	fwrite($file, "define(\"N_COLUMNS\", " . var_export("$n_columns", true) . ");\n");
+	fwrite($file, "define(\"VIDEOS_MODE\", " . var_export("$videos_mode", true) . ");\n");
+	fwrite($file, "define(\"STILLS_MODE\", " . var_export("$stills_mode", true) . ");\n");
+	fwrite($file, "define(\"LOOP_MODE\", " . var_export("$loop_mode", true) . ");\n");
+	fwrite($file, "define(\"ARCHIVE_INITIAL_VIEW\", " . var_export("$archive_initial_view", true) . ");\n");
+	fwrite($file, "define(\"ARCHIVE_THUMBS_SCROLLED\", " . var_export("$archive_thumbs_scrolled", true) . ");\n");
+	fwrite($file, "define(\"MEDIA_THUMBS_SCROLLED\", " . var_export("$media_thumbs_scrolled", true) . ");\n\n");
+	fwrite($file, "define(\"LOOP_THUMBS_SCROLLED\", " . var_export("$loop_thumbs_scrolled", true) . ");\n\n");
 
 	fwrite($file, "// Do not edit this value..\n");
-	fwrite($file, "define(\"CONFIG_EVENT_COUNT\", \"$config_event_count\");\n");
+	fwrite($file, "define(\"CONFIG_EVENT_COUNT\", " . var_export("$config_event_count", true) . ");\n");
 	fwrite($file, "?>\n");
 	fclose($file);
 	chmod("config-user.php", 0666);

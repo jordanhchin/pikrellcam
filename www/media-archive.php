@@ -86,6 +86,7 @@ a.anchor
 // error_reporting(-1);
 
 include(dirname(__FILE__) . '/config.php');
+require_once(dirname(__FILE__) . '/security.php');
 
 include(dirname(__FILE__) . '/config-user.php');
 include(dirname(__FILE__) . '/config-defaults.php');
@@ -426,7 +427,6 @@ function wait_files_gone($key, $pat)
 					break;
 				}
 			}
-			break;
 		}
 	usleep(400000);
 //	if ($i == 16)
@@ -447,9 +447,7 @@ function restart_page($selected)
 
 //echo "<script type='text/javascript'>alert('$name_style $n_columns');</script>";
 
-	$media_mode = "archive";
-	if (isset($_GET["mode"]))
-		$media_mode = $_GET["mode"];	// "archive", "media" or "loop"
+	$media_mode = pkc_get_choice("mode", array("archive", "media", "loop"), "archive");
 	$title = TITLE_STRING;
 
 	$header = "<!DOCTYPE html><html><head>";
@@ -483,30 +481,34 @@ function restart_page($selected)
 	$year = "";
 	$stills_thumb_rescan = true;
 
+	$types = array("videos", "stills", "thumbs");
 	if (isset($_GET["newtype"]))
-		$media_type = $_GET["newtype"];	// "videos" or "stills"
-	else if (isset($_GET["type"]))
-		$media_type = $_GET["type"];	// "videos" or "stills"
+		$media_type = pkc_get_choice("newtype", $types, "videos");
+	else
+		$media_type = pkc_get_choice("type", $types, "videos");
 	if ("$media_type" == "thumbs")
 		$media_type = "videos";			// transition from old version
 
 	if (isset($_GET["label"]))			// Descriptive label of media_mode
-		$label = $_GET["label"];
+		$label = preg_replace('/[^A-Za-z0-9 _-]/', '', substr($_GET["label"], 0, 40));
 
-	if (isset($_GET["file"]))
+	if (isset($_GET["file"]) && pkc_valid_name($_GET["file"]))
 		$selected = $_GET["file"];
 
-	if (isset($_GET["dir"]))
+	// dir is only ever media, loop or an archive day directory.
+	if (   isset($_GET["dir"])
+	    && preg_match('#^(media|loop|' . preg_quote(ARCHIVE_DIR, '#') . '/\d{4}/\d{2}/\d{2})$#', $_GET["dir"]))
 		$media_dir = $_GET["dir"];
 
 	if ("$media_mode" == "archive")
 		{
-		$year = $_GET["year"];
-		$month0 = $_GET["m0"];
-		$day0 = $_GET["d0"];
-		$month1 = $_GET["m1"];
-		$day1 = $_GET["d1"];
-		$env = "mode=$media_mode&type=$media_type&label=$label&year=$year&m0=$month0&d0=$day0&m1=$month1&d1=$day1";
+		$year = pkc_get_int("year", intval(date('Y')), 1970, 2999);
+		$month0 = pkc_get_int("m0", 1, 1, 12);
+		$day0 = pkc_get_int("d0", 1, 1, 31);
+		$month1 = pkc_get_int("m1", 12, 1, 12);
+		$day1 = pkc_get_int("d1", 31, 1, 31);
+		$url_label = rawurlencode($label);
+		$env = "mode=$media_mode&type=$media_type&label=$url_label&year=$year&m0=$month0&d0=$day0&m1=$month1&d1=$day1";
 		}
 	else if ("$media_mode" == "loop")
 		{
@@ -627,12 +629,17 @@ function restart_page($selected)
 //		restart_page($selected);
 		}
 
-	if (isset($_POST['action']) && !empty($_POST['file_list']))
+	if (   isset($_POST['action']) && !empty($_POST['file_list'])
+	    && is_array($_POST['file_list']))
 		{
+		pkc_require_same_origin();
 		$action = $_POST['action'];
 		foreach ($_POST['file_list'] as $file)
 			{
-			$parts = explode("/", $file);
+			$parts = explode("/", "$file");
+			if (   count($parts) != 2
+			    || !pkc_valid_ymd($parts[0]) || !pkc_valid_name($parts[1]))
+				continue;
 			$ymd = $parts[0];
 			$date = explode("-", $ymd);
 			$fname = $parts[1];				// mp4 name is passed in thumb mode
@@ -662,8 +669,10 @@ function restart_page($selected)
 		restart_page($selected);
 		}
 
-	if (isset($_GET["archive"]))
+	if (   isset($_GET["archive"]) && pkc_valid_name($_GET["archive"])
+	    && isset($_GET["date"]) && pkc_valid_ymd($_GET["date"]))
 		{
+		pkc_require_same_origin();
 		$fname = $_GET["archive"];	// mp4 passed for videos or thumbs type
 		$ymd = $_GET["date"];
 		$fifo = fopen(FIFO_FILE,"w");
@@ -678,12 +687,13 @@ function restart_page($selected)
 			$subdir = "stills";
 			}
 		fclose($fifo);
-		wait_files_gone("file", "$media_dir/$sub_dir/$fname");
+		wait_files_gone("file", "$media_dir/$subdir/$fname");
 		restart_page($selected);
 		}
 
-	if (isset($_GET["archive_date"]))
+	if (isset($_GET["archive_date"]) && pkc_valid_ymd($_GET["archive_date"]))
 		{
+		pkc_require_same_origin();
 		$ymd = $_GET["archive_date"];
 		$fifo = fopen(FIFO_FILE,"w");
 		if ("$media_type" == "videos")
@@ -695,15 +705,17 @@ function restart_page($selected)
 		restart_page($selected);
 		}
 
-	if (isset($_GET["delete"]))
+	if (isset($_GET["delete"]) && pkc_valid_name($_GET["delete"]))
 		{
+		pkc_require_same_origin();
 		$del_name = $_GET["delete"];
 		delete_file($media_dir, $del_name);
 		restart_page($selected);
 		}
 
-	if (isset($_GET["delete_day"]))
+	if (isset($_GET["delete_day"]) && pkc_valid_ymd($_GET["delete_day"]))
 		{
+		pkc_require_same_origin();
 		$ymd = $_GET["delete_day"];
 		delete_day($media_dir, $ymd);
 		restart_page($selected);
@@ -711,6 +723,7 @@ function restart_page($selected)
 
 	if (isset($_GET["delete_all"]))
 		{
+		pkc_require_same_origin();
 		if ("$media_mode" == "archive")
 			delete_archive_range($year, $month0, $day0, $month1, $day1);
 		else
@@ -718,7 +731,7 @@ function restart_page($selected)
 		restart_page("");
 		}
 
-	$fs_type = exec("stat -f -L -c %T $archive_root");
+	$fs_type = exec("stat -f -L -c %T " . escapeshellarg($archive_root));
 	if ("$fs_type" == "nfs")
 		$arch_type = "NFS";
 	else if (strpos($fs_type, 'Stale') !== false)
@@ -894,16 +907,16 @@ function restart_page($selected)
 
 	if ("$media_mode" == "archive")
 		{
-		$dir = exec("readlink -f $archive_root");
+		$dir = exec("readlink -f " . escapeshellarg($archive_root));
 		if ("$arch_type" != "")
 			{
-			$tmp = exec("(df | grep $dir | cut -d \" \" -f 1)");
+			$tmp = exec("(df | grep -F -- " . escapeshellarg($dir) . " | cut -d \" \" -f 1)");
 			if ("$tmp" != "")
 				$dir = $tmp;
 			}
 		}
 	else
-		$dir = exec("readlink -f $media_dir"). "/$media_type";
+		$dir = exec("readlink -f " . escapeshellarg($media_dir)) . "/$media_type";
 	$e_user = "pi";
 	if (file_exists('user.php'))
 		include 'user.php';

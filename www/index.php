@@ -242,7 +242,7 @@ echo "</div>";
 echo "<div id='container' class='top-margin'>";
 
 $archive_root = ARCHIVE_DIR;
-$fs_type = exec("stat -f -L -c %T $archive_root");
+$fs_type = exec("stat -f -L -c %T " . escapeshellarg($archive_root));
 if ("$fs_type" == "nfs")
 	$arch_type = "NFS";
 else if (strpos($fs_type, 'Stale') !== false)

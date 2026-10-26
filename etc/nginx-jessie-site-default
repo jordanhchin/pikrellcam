@@ -31,10 +31,27 @@ server {
 	auth_basic "Restricted";
 	auth_basic_user_file PIKRELLCAM_WWW/.htpasswd;
 
+	# PiKrellCam takes no uploads.  Small request bodies also limit
+	# exposure to PHP request-parsing bugs.
+	client_max_body_size 1m;
+
+	add_header X-Frame-Options SAMEORIGIN always;
+	add_header X-Content-Type-Options nosniff always;
+	add_header Referrer-Policy same-origin always;
+
 	# Add index.php to the list if you are using PHP
 	index index.php index.html index.htm index.nginx-debian.html;
 
 	server_name _;
+
+	# Never serve .htpasswd or .git, or the command FIFOs.
+	# (Other dot dirs are needed: stills thumbs are in stills/.thumbs.)
+	location ~ /\.(ht|git) {
+		deny all;
+	}
+	location ~ (^|/)[A-Za-z_]*FIFO$ {
+		deny all;
+	}
 
 	location / {
 		# First attempt to serve request as file, then
@@ -50,14 +67,7 @@ server {
 	#	# With php5-cgi alone:
 	#	fastcgi_pass 127.0.0.1:9000;
 	#	# With php5-fpm:
-		fastcgi_pass unix:/var/run/php5-fpm.sock;
+		fastcgi_pass unix:PHP_FPM_SOCK;
 	}
-
-	# deny access to .htaccess files, if Apache's document root
-	# concurs with nginx's one
-	#
-	#location ~ /\.ht {
-	#	deny all;
-	#}
 }
 

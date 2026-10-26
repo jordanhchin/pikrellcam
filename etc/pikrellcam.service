@@ -1,0 +1,16 @@
+[Unit]
+Description=PiKrellCam motion detecting camera
+After=network.target
+
+[Service]
+Type=simple
+User=USER
+WorkingDirectory=INSTALL_DIR
+ExecStart=INSTALL_DIR/pikrellcam
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -15,6 +15,7 @@ a.anchor
 
 <?php
 require_once(dirname(__FILE__) . '/config.php');
+require_once(dirname(__FILE__) . '/security.php');
 include_once(dirname(__FILE__) . '/config-user.php');
 include_once(dirname(__FILE__) . '/config-defaults.php');	
 
@@ -66,6 +67,7 @@ function dump_log()
 
 		if (isset($_GET["delete_log"]))
 			{
+			pkc_require_same_origin();
 			$fifo = fopen(FIFO_FILE,"w");
     		fwrite($fifo, "delete_log");
     		fclose($fifo);

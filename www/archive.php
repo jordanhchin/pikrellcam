@@ -9,6 +9,7 @@ pre
 
 <?php
 require_once(dirname(__FILE__) . '/config.php');
+require_once(dirname(__FILE__) . '/security.php');
 include_once(dirname(__FILE__) . '/config-user.php');
 include_once(dirname(__FILE__) . '/config-defaults.php');	
 
@@ -162,14 +163,12 @@ function build_month_html($year, $month, $type)
 			style='text-decoration: none;' href='index.php'>$title</a></div></div>";
 	echo $header;
 
-	if (isset($_GET["year"]))
-		$year = $_GET["year"];
-	else
-		$year = date('Y');
+	$year = pkc_get_int("year", intval(date('Y')), 1970, 2999);
 
 	if (isset($_GET["view"]))
 		{
-		$archive_initial_view = $_GET["view"];
+		$archive_initial_view = pkc_get_choice("view",
+					array("videos", "thumbs", "stills"), "videos");
 		config_user_save();
 //		echo "<script>window.location=\"archive.php?year=$year\";</script>";
 //		exit(0);
@@ -219,7 +218,7 @@ function build_month_html($year, $month, $type)
 		$title</a></div>";
 
 	$archive_root = ARCHIVE_DIR;
-	$fs_type = exec("stat -f -L -c %T $archive_root");
+	$fs_type = exec("stat -f -L -c %T " . escapeshellarg($archive_root));
 
 	if ("$fs_type" == "nfs")
 		$arch_type = "NFS";
@@ -228,11 +227,11 @@ function build_month_html($year, $month, $type)
 	else
 		$arch_type = "";
 
-	$dir = exec("readlink -f $archive_root");
+	$dir = exec("readlink -f " . escapeshellarg($archive_root));
 
 	if ("$arch_type" != "")
 		{
-		$nfs_dir = exec("(df | grep $dir | cut -d \" \" -f 1)");
+		$nfs_dir = exec("(df | grep -F -- " . escapeshellarg($dir) . " | cut -d \" \" -f 1)");
 		$arch_label = "$nfs_dir &nbsp $arch_type mounted-> &nbsp $dir";
 		}
 	else

@@ -1,4 +1,4 @@
-# If started from the web page, real user needs to be pi.
-# so give www-data permission to run sudo -u pi pikrellcam
+# The web page starts and stops pikrellcam through its systemd service,
+# so give www-data permission to run only those two commands.
 
-www-data ALL=(USER) NOPASSWD: pikrellcam
+www-data ALL=(root) NOPASSWD: /bin/systemctl start pikrellcam, /bin/systemctl stop pikrellcam

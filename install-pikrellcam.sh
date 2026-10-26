@@ -25,13 +25,13 @@ then
 	bad_install "directory www"
 fi
 
-sudo chown .www-data $PWD/www
+sudo chown :www-data $PWD/www
 sudo chmod 775 $PWD/www
 
 if [ ! -d media ]
 then
 	mkdir media media/archive media/videos media/thumbs media/stills
-	sudo chown .www-data media media/archive media/videos media/thumbs media/stills
+	sudo chown :www-data media media/archive media/videos media/thumbs media/stills
 	sudo chmod 775 media media/archive media/videos media/thumbs media/stills
 fi
 
@@ -61,9 +61,9 @@ else
 fi
 
 echo ""
-echo "For auto starting at boot, a PiKrellCam start command must be in rc.local."
-echo "If you don't start at boot, PiKrellCam can always be started and stopped"
-echo "from the web page."
+echo "PiKrellCam is installed as a systemd service which can be enabled to start"
+echo "at boot.  If you don't start at boot, PiKrellCam can always be started and"
+echo "stopped from the web page."
 echo -n "Do you want PiKrellCam to be auto started at boot? (yes/no): "
 read resp
 if [ "$resp" == "y" ] || [ "$resp" == "yes" ]
@@ -96,10 +96,29 @@ fi
 
 if [ "$SET_PASSWORD" == "yes" ]
 then
+	# A web password is required: the web page can control the camera,
+	# delete media and reboot the Pi.
 	echo "Enter a password for a web page login for user: $USER"
-	echo "Enter a blank entry if you do not want the password login."
-	echo -n "Enter password: "
-	read PASSWORD
+	while true
+	do
+		echo -n "Enter password: "
+		read -s PASSWORD
+		echo ""
+		if [ "$PASSWORD" == "" ]
+		then
+			echo "The password cannot be blank."
+			continue
+		fi
+		echo -n "Enter password again: "
+		read -s PASSWORD2
+		echo ""
+		if [ "$PASSWORD" != "$PASSWORD2" ]
+		then
+			echo "The passwords do not match."
+			continue
+		fi
+		break
+	done
 fi
 
 
@@ -123,8 +142,9 @@ PACKAGE_LIST=""
 
 if ((DEB_VERSION >= BUSTER))
 then
+	# Use the distribution's default (and security supported) PHP version.
 	AV_PACKAGES="ffmpeg"
-	PHP_PACKAGES="php7.3 php7.3-common php7.3-fpm"
+	PHP_PACKAGES="php-fpm php-common"
 elif ((DEB_VERSION >= STRETCH))
 then
 	AV_PACKAGES="libav-tools"
@@ -220,50 +240,48 @@ then
 fi
 
 
-# =============== pikrellcam autostart to rc.local  ===============
+# =============== pikrellcam systemd service  ===============
 #
-#CMD="su $USER -c '(sleep 5; \/home\/pi\/pikrellcam\/pikrellcam)  \&'"
-CMD="su $USER -c '(sleep 5; $PWD/pikrellcam) \&'"
+SERVICE=/etc/systemd/system/pikrellcam.service
+echo "Installing $SERVICE"
+sed "s|INSTALL_DIR|$PWD|g; s|USER|$USER|" etc/pikrellcam.service > /tmp/pikrellcam.service.tmp
+sudo mv /tmp/pikrellcam.service.tmp $SERVICE
+sudo chown root:root $SERVICE
+sudo chmod 644 $SERVICE
+sudo systemctl daemon-reload
+
+# Older installs started pikrellcam from rc.local.
+if [ -f /etc/rc.local ] && grep -q pikrellcam /etc/rc.local
+then
+	echo "Removing old pikrellcam autostart line from /etc/rc.local."
+	sudo sed -i "/pikrellcam/d" /etc/rc.local
+fi
 
 if [ "$AUTOSTART" == "yes" ]
 then
-    if ! fgrep -q "$CMD" /etc/rc.local
-    then
-		if grep -q pikrellcam /etc/rc.local
-		then
-			sudo sed -i "/pikrellcam/d" /etc/rc.local
-		fi
-		echo "Adding a pikrellcam autostart command to /etc/rc.local:"
-        sudo sed -i "s|^exit.*|$CMD\n&|" /etc/rc.local
-		if ! [ -x /etc/rc.local ]
-		then
-			echo "Added execute permission to /etc/rc.local"
-			sudo chmod a+x /etc/rc.local
-		fi
-		grep pikrellcam /etc/rc.local
-    fi
+	echo "Enabling pikrellcam service to start at boot."
+	sudo systemctl enable pikrellcam
 else
-	if grep -q pikrellcam /etc/rc.local
-	then
-		echo "Removing pikrellcam autostart line from /etc/rc.local."
-		sudo sed -i "/pikrellcam/d" /etc/rc.local
-	fi
+	sudo systemctl disable pikrellcam 2>/dev/null
 fi
 
 
-# ===== sudoers permission for www-data to run pikrellcam as pi ======
+# ===== sudoers permission for www-data to start/stop the service ======
 #
-CMD=$PWD/pikrellcam
-if ! grep -q "$CMD" /etc/sudoers.d/pikrellcam 2>/dev/null
+if ! cmp -s etc/pikrellcam.sudoers /etc/sudoers.d/pikrellcam
 then
-	echo "Adding to /etc/sudoers.d: www-data permission to run pikrellcam as user pi:"
+	echo "Installing /etc/sudoers.d/pikrellcam: www-data permission to start"
+	echo "    and stop the pikrellcam service."
 	cp etc/pikrellcam.sudoers /tmp/pikrellcam.sudoers.tmp
-	sed -i "s|pikrellcam|$CMD|" /tmp/pikrellcam.sudoers.tmp
-	sed -i "s/USER/$USER/" /tmp/pikrellcam.sudoers.tmp
-	sudo chown root.root /tmp/pikrellcam.sudoers.tmp
-	sudo chmod 440 /tmp/pikrellcam.sudoers.tmp
-	sudo mv /tmp/pikrellcam.sudoers.tmp /etc/sudoers.d/pikrellcam
-#	sudo cat /etc/sudoers.d/pikrellcam
+	if sudo visudo -c -f /tmp/pikrellcam.sudoers.tmp > /dev/null
+	then
+		sudo chown root:root /tmp/pikrellcam.sudoers.tmp
+		sudo chmod 440 /tmp/pikrellcam.sudoers.tmp
+		sudo mv /tmp/pikrellcam.sudoers.tmp /etc/sudoers.d/pikrellcam
+	else
+		echo "Error: etc/pikrellcam.sudoers failed visudo check, not installed."
+		rm -f /tmp/pikrellcam.sudoers.tmp
+	fi
 fi
 
 # =============== Setup Password  ===============
@@ -282,8 +300,10 @@ fi
 
 if [ "$PASSWORD" != "" ]
 then
-	htpasswd -bc $HTPASSWD $USER $PASSWORD
-	sudo chown $USER.www-data $HTPASSWD
+	# -i reads the password from stdin so it is not visible in ps.
+	echo "$PASSWORD" | htpasswd -ic $HTPASSWD $USER
+	sudo chown $USER:www-data $HTPASSWD
+	sudo chmod 640 $HTPASSWD
 fi
 
 
@@ -315,10 +335,32 @@ sudo sed -i "s|PIKRELLCAM_WWW|$PWD/www|; \
 
 if ((DEB_VERSION >= BUSTER))
 then
-	sudo sed -i "s/php5/php\/php7.3/" /etc/nginx/sites-available/pikrellcam
+	# php-fpm installs /usr/sbin/php-fpmX.Y
+	PHP_VERSION=`ls /usr/sbin/php-fpm* 2>/dev/null | sed -n 's|.*php-fpm||p' | sort -V | tail -1`
+	PHP_FPM_SOCK=/run/php/php$PHP_VERSION-fpm.sock
+	PHP_FPM_SERVICE=php$PHP_VERSION-fpm
 elif ((DEB_VERSION >= STRETCH))
 then
-	sudo sed -i "s/php5/php\/php7.0/" /etc/nginx/sites-available/pikrellcam
+	PHP_VERSION=7.0
+	PHP_FPM_SOCK=/run/php/php7.0-fpm.sock
+	PHP_FPM_SERVICE=php7.0-fpm
+else
+	PHP_VERSION=5
+	PHP_FPM_SOCK=/var/run/php5-fpm.sock
+	PHP_FPM_SERVICE=php5-fpm
+fi
+echo "    PHP version: $PHP_VERSION  socket: $PHP_FPM_SOCK"
+sudo sed -i "s|PHP_FPM_SOCK|$PHP_FPM_SOCK|" /etc/nginx/sites-available/pikrellcam
+
+# PiKrellCam takes no file uploads, so turn off PHP upload handling.
+# This also reduces exposure to PHP request-parsing vulnerabilities.
+PHP_INI_DIR=/etc/php/$PHP_VERSION/fpm/conf.d
+if [ -d $PHP_INI_DIR ]
+then
+	echo "Installing $PHP_INI_DIR/99-pikrellcam.ini"
+	sudo cp etc/php-pikrellcam.ini $PHP_INI_DIR/99-pikrellcam.ini
+	sudo chmod 644 $PHP_INI_DIR/99-pikrellcam.ini
+	sudo service $PHP_FPM_SERVICE restart
 fi
 
 NGINX_SITE=/etc/nginx/sites-available/pikrellcam
@@ -345,8 +387,8 @@ fi
 
 if [ ! -f $HTPASSWD ]
 then
-	echo "A password for the web page is not set."
-	sudo sed -i 's/auth_basic/\# auth_basic/' $NGINX_SITE
+	echo "Error: a password for the web page is not set ($HTPASSWD missing)."
+	echo "Rerun $PGM to set one.  The web page will not load until then."
 fi
 
 sudo service nginx restart
@@ -361,7 +403,7 @@ then
 	rm -f $fifo
 	mkfifo $fifo
 fi
-sudo chown $USER.www-data $fifo
+sudo chown $USER:www-data $fifo
 sudo chmod 664 $fifo
 
 
